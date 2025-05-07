@@ -2,7 +2,7 @@
 
 ASNIP is a Meshtastic plugin designed to integrate sensor data into the Meshtastic network. It allows users to broadcast sensor readings from a configurable set of sensors and receive/log data from other sensor nodes.
 
-**Organization:** AkitaEngineering  
+**Organization:** Akita Engineering  
 **Repository:** AkitaEngineering/Akita-Sensor-Network-Integration-Plugin  
 **License:** GPLv3
 
