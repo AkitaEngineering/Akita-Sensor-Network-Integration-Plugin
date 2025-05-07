@@ -1,0 +1,5 @@
+meshtastic>=2.0.0 # Or your preferred minimum version
+adafruit-circuitpython-bme280 # For BME280 sensor support
+# Add other specific Python libraries your custom sensor readers might use, e.g.:
+# RPi.GPIO
+# smbus2
