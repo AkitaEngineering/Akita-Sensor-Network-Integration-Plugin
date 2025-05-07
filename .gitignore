@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+include/
+lib/
+lib64/
+share/
+*.egg
+*.log
+venv/
+.venv/
+ENV/
+env/
+pip-selfcheck.json
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# ASNIP specific user files (logs, potentially user-modified sensor configs if not versioned)
+# sensor_log.json # Example: if you don't want to commit logs
+# sensors.json # Example: if users heavily customize it and you only provide a template
