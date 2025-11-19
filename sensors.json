@@ -1,4 +1,8 @@
 {
+  "settings": {
+    "log_file": "sensor_log.json",
+    "broadcast_interval": 30
+  },
   "sensors": [
     {
       "name": "cpu_temp_sim",
@@ -11,65 +15,12 @@
       }
     },
     {
-      "name": "room_humidity_sim",
-      "type": "simulated_humidity",
-      "enabled": true,
-      "params": {
-        "min_hum": 40.0,
-        "max_hum": 60.0,
-        "unit": "%" 
-      }
-    },
-    {
-      "name": "internal_pressure_sim", 
-      "type": "random_value",
-      "enabled": true,
-      "params": {
-        "min_val": 980,
-        "max_val": 1020,
-        "unit": "hPa"
-      }
-    },
-    {
         "name": "device_label",
         "type": "static_value",
         "enabled": true,
         "params": {
             "value": "AkitaNode-Alpha"
         }
-    },
-    {
-        "name": "custom_script_output",
-        "type": "custom_script", 
-        "enabled": false, 
-        "params": {
-            "script_path": "echo 'hello_world'",
-            "timeout": 2 
-        }
-    },
-    {
-      "name": "ambient_temp_bme280",
-      "type": "bme280_temperature",
-      "enabled": false, 
-      "params": {
-        "unit": "C"
-      }
-    },
-    {
-      "name": "ambient_humidity_bme280",
-      "type": "bme280_humidity",
-      "enabled": false,
-      "params": {
-        "unit": "%"
-      }
-    },
-    {
-      "name": "barometric_pressure_bme280",
-      "type": "bme280_pressure",
-      "enabled": false,
-      "params": {
-        "unit": "hPa"
-      }
     }
   ]
 }
