@@ -20,11 +20,43 @@ This plugin broadcasts sensor data read from a configurable set of sensors
 and logs received sensor data from other nodes.
 """
 
-import meshtastic
-import meshtastic.plugin
-import meshtastic.util
-from meshtastic.mesh_interface import MeshInterface
-from meshtastic.protobuf import mesh_pb2, portnums_pb2
+# Meshtastic imports are optional at import-time so the module can be
+# imported for unit tests or static analysis in environments where the
+# Meshtastic package is not installed. At runtime (on-device) the real
+# package will be used.
+try:
+    import meshtastic
+    import meshtastic.plugin
+    import meshtastic.util
+    from meshtastic.mesh_interface import MeshInterface
+    from meshtastic.protobuf import mesh_pb2, portnums_pb2
+except Exception:  # pragma: no cover - fallback for non-device environments
+    # Provide minimal runtime-compatible stubs so the module can be imported
+    # in environments where the Meshtastic package isn't available (tests,
+    # static analysis, CI, etc.).
+    class _StubPluginBase:
+        def __init__(self, interface=None, args=None):
+            self._iface = interface
+
+        def onReceive(self, packet, interface):
+            return None
+
+    class _StubMeshtasticModule:
+        plugin = type("plugin", (), {"Plugin": _StubPluginBase})
+        util = None
+
+    meshtastic = _StubMeshtasticModule()
+
+    class MeshInterface:  # type: ignore
+        """Lightweight stand-in for type annotations only."""
+        pass
+
+    class _DummyPortNum:
+        PRIVATE_APP_1 = 100
+
+    class portnums_pb2:  # type: ignore
+        PortNum = _DummyPortNum
+
 
 import argparse
 import json
@@ -285,23 +317,56 @@ class ASNIP(meshtastic.plugin.Plugin):
     # ... [_get_sensor_data, _load_log_data, _save_log_data remain unchanged] ...
     
     def _get_sensor_data(self):
-        if not self.iface: return None
-        collected_data = {}
+        if not self.iface:
+            return None
+
+        collected_data: Dict[str, Any] = {}
         for sensor_conf in self.sensor_configurations:
-            if not sensor_conf.get("enabled", False): continue
+            if not sensor_conf.get("enabled", False):
+                continue
             reader = self.sensor_reader_map.get(sensor_conf["type"])
             if reader:
                 try:
                     val = reader(sensor_conf.get("params", {}))
-                    if val is not None: collected_data[sensor_conf["name"]] = val
-                except Exception: pass # Logged inside readers typically
+                    if val is not None:
+                        collected_data[sensor_conf["name"]] = val
+                except Exception:
+                    # individual readers should log their own errors;
+                    # don't let a single sensor break collection
+                    logger.exception("Sensor reader failed for %s", sensor_conf.get("name"))
 
-        node_info = self.iface.getMyNodeInfo()
+        # Be defensive: MeshInterface.getMyNodeInfo() may return a dict or an
+        # object with attributes depending on Meshtastic version. Handle
+        # both safely so the plugin is resilient to API shape changes.
+        node_num = None
+        node_name = "Unknown"
+        try:
+            node_info = None
+            if hasattr(self.iface, "getMyNodeInfo"):
+                try:
+                    node_info = self.iface.getMyNodeInfo()
+                except Exception as exc:  # defensive
+                    logger.debug("getMyNodeInfo() raised: %s", exc)
+                    node_info = None
+
+            if isinstance(node_info, dict):
+                node_num = node_info.get("myNodeNum")
+                node_name = node_info.get("longName", node_name)
+            else:
+                node_num = getattr(node_info, "myNodeNum", None)
+                node_name = (
+                    getattr(node_info, "longName", None)
+                    or getattr(node_info, "long_name", None)
+                    or node_name
+                )
+        except Exception:
+            logger.debug("Failed to read node info from interface", exc_info=True)
+
         return {
-            "source_node_num": node_info.get("myNodeNum") if node_info else None, 
-            "source_node_name": node_info.get("longName") if node_info else "Unknown",
-            "timestamp": time.time(), 
-            "data": collected_data 
+            "source_node_num": node_num,
+            "source_node_name": node_name,
+            "timestamp": time.time(),
+            "data": collected_data,
         }
 
     def _load_log_data(self):
@@ -388,7 +453,38 @@ class ASNIP(meshtastic.plugin.Plugin):
         self.queue_processor_thread = threading.Thread(target=self._process_message_queue_loop, daemon=True)
         self.queue_processor_thread.start()
 
-    def stop(self):
+    def stop(self, timeout: float = 5.0):
+        """Stop background threads and persist any pending log data.
+
+        The timeout is applied to thread joins and is best-effort — threads
+        are asked to stop via the `running` event and then joined.
+        """
         self.running.clear()
-        # Join threads logic (same as previous)
-        if self.iface: self._save_log_data()
+
+        # Wait for threads to finish (non-blocking if they already stopped)
+        try:
+            if self.broadcast_thread and self.broadcast_thread.is_alive():
+                self.broadcast_thread.join(timeout)
+        except Exception:
+            logger.debug("Error joining broadcast thread", exc_info=True)
+
+        try:
+            if self.queue_processor_thread and self.queue_processor_thread.is_alive():
+                self.queue_processor_thread.join(timeout)
+        except Exception:
+            logger.debug("Error joining queue processor thread", exc_info=True)
+
+        # Best-effort drain/cleanup of the message queue
+        try:
+            while not self.message_queue.empty():
+                try:
+                    self.message_queue.get_nowait()
+                    self.message_queue.task_done()
+                except Exception:
+                    break
+        except Exception:
+            pass
+
+        # Persist logs
+        if self.iface:
+            self._save_log_data()

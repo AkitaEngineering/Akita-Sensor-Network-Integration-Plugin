@@ -1,0 +1,58 @@
+[
+    {
+        "timestamp": 1771086317.5853832,
+        "type": "self",
+        "source_node_num": 42,
+        "payload": {
+            "source_node_num": 42,
+            "source_node_name": "fake-node",
+            "timestamp": 1771086317.5853817,
+            "data": {
+                "cpu_temp_sim": 46.66,
+                "device_label": "AkitaNode-Alpha"
+            }
+        }
+    },
+    {
+        "timestamp": 1771086379.080495,
+        "type": "self",
+        "source_node_num": 42,
+        "payload": {
+            "source_node_num": 42,
+            "source_node_name": "fake-node",
+            "timestamp": 1771086379.080492,
+            "data": {
+                "cpu_temp_sim": 37.74,
+                "device_label": "AkitaNode-Alpha"
+            }
+        }
+    },
+    {
+        "timestamp": 1771086596.1915863,
+        "type": "self",
+        "source_node_num": 42,
+        "payload": {
+            "source_node_num": 42,
+            "source_node_name": "fake-node",
+            "timestamp": 1771086596.1915846,
+            "data": {
+                "cpu_temp_sim": 58.35,
+                "device_label": "AkitaNode-Alpha"
+            }
+        }
+    },
+    {
+        "timestamp": 1771086773.5117424,
+        "type": "self",
+        "source_node_num": 42,
+        "payload": {
+            "source_node_num": 42,
+            "source_node_name": "fake-node",
+            "timestamp": 1771086773.511741,
+            "data": {
+                "cpu_temp_sim": 43.92,
+                "device_label": "AkitaNode-Alpha"
+            }
+        }
+    }
+]

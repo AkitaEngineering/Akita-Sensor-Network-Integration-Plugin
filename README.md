@@ -1,151 +1,105 @@
 # Akita Sensor Network Integration Plugin (ASNIP)
 
-ASNIP is a Meshtastic plugin designed to integrate sensor data into the Meshtastic network. It allows users to broadcast sensor readings from a configurable set of sensors and receive/log data from other sensor nodes.
+ASNIP integrates sensor readings with Meshtastic: it periodically broadcasts
+local sensor values on a private port and logs both local and remote sensor
+messages to a JSON file. This repository contains the plugin implementation
+and test helpers used during development.
 
-**Organization:** Akita Engineering  
-**License:** GPLv3
+**Organization:** Akita Engineering
+**License:** GPLv3 (see `LICENSE`)
 
 ---
 
-## Features
+## Quick Start
 
-- Broadcast: Periodically sends sensor data over the mesh using a private port.  
-- Logging: Logs local and remote sensor data to a JSON file.  
-- Flexible Config: All settings (interval, log file, sensors) are controlled via sensors.json.  
-- Extensible: Easily add Python functions to read new sensors.  
-- Smart Loading: Automatically detects configuration files in standard locations or via environment variables.
+1. Install dependencies into your Python environment:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Make the plugin available to Meshtastic. During development you can run
+   the plugin code directly from `src/` (see tests for examples).
+
+3. Configure sensors via `sensors.json` (see `docs/README.md` for schema).
+
+4. Run the plugin inside Meshtastic or use the test harness to exercise
+   functionality locally.
 
 ---
 
 ## Installation
 
-### 1. Place Plugin File
+- System deployment: copy `src/asnip/asnip.py` to Meshtastic's plugin
+  directory (e.g. `~/.meshtastic/plugins/`).
+- Development: import `asnip.asnip` from the `src/` folder (tests already
+  do this by adding `src/` to `sys.path`).
 
-Copy `src/asnip/asnip.py` into your Meshtastic plugins directory.
+Install only the runtime dependencies you need; the BME280 driver is
+optional unless you use bme280 sensor types.
 
-Typical locations:
-
-- Linux / Raspberry Pi: `~/.meshtastic/plugins/`
-- Or inside the Meshtastic source directory, depending on install method.
-
-### 2. Install Dependencies
-
-pip install meshtastic  
-pip install adafruit-circuitpython-bme280  
-(only required if using BME280 sensors)
+```bash
+pip install meshtastic
+pip install adafruit-circuitpython-bme280  # optional
+```
 
 ---
 
-## Configuration Setup
+## Configuration
 
-ASNIP requires a sensors.json configuration file.  
-It is searched in the following order (highest priority first):
+ASNIP reads configuration from `sensors.json`. The search order is:
 
-1. Environment variable: `ASNIP_CONFIG`
-2. Current working directory: `./sensors.json`
-3. Plugin directory: next to `asnip.py`
+1. `ASNIP_CONFIG` environment variable
+2. `./sensors.json` (current working directory)
+3. `sensors.json` located next to the plugin file
 
-If no file is found, the plugin will generate a default config.
+If missing, a reasonable default config will be created for you.
 
----
-
-## Usage
-
-### Edit Configuration
-
-Create or modify `sensors.json`.
-
-### Enable Plugin
-
-meshtastic --set-plugin asnip.enabled true
-
-Note: Do not use unsupported flags such as `--sensor-config` or `--interval`.
+See `docs/README.md` for a full configuration schema and examples.
 
 ---
 
-## Example sensors.json
+## Sensor Types
 
-{
-  "settings": {
-    "log_file": "sensor_log.json",
-    "broadcast_interval": 30
-  },
-  "sensors": [
-    {
-      "name": "cpu_temp_sim",
-      "type": "simulated_temperature",
-      "enabled": true,
-      "params": {
-        "min_temp": 35.0,
-        "max_temp": 65.0,
-        "unit": "C"
-      }
-    },
-    {
-      "name": "my_bme280_temp",
-      "type": "bme280_temperature",
-      "enabled": false,
-      "params": { "unit": "C" }
-    },
-    {
-      "name": "external_script",
-      "type": "custom_script",
-      "enabled": false,
-      "params": {
-        "script_path": "/usr/local/bin/get_battery_level.sh",
-        "timeout": 2
-      }
-    }
-  ]
-}
+- `simulated_temperature` / `simulated_humidity` — simulated values for testing
+- `random_value` — integer between `min_val` and `max_val`
+- `static_value` — returns a fixed value configured in `params`
+- `custom_script` — runs an external script (use caution)
+- `bme280_temperature` / `bme280_humidity` / `bme280_pressure` — hardware
+  sensor values (requires BME280 library and hardware)
+
+Security note: `custom_script` uses shell execution. Ensure `sensors.json`
+is protected from untrusted writers.
 
 ---
 
-## Available Sensor Types
+## Development & Tests
 
-- simulated_temperature / simulated_humidity — random simulated test data  
-- random_value — random integer (min_val, max_val)  
-- static_value — fixed value  
-- custom_script — runs an external script  
-- bme280_temperature / humidity / pressure — hardware sensor support  
+Run tests with `pytest` from the repository root. The test suite includes
+examples for importing the plugin from `src/` and exercising the main
+behaviors.
 
----
-
-## Security Note on Custom Scripts
-
-The `custom_script` type uses `subprocess.run(shell=True)`.
-
-**Risk:** If sensors.json is modified by an attacker, they can run arbitrary commands.  
-**Mitigation:** Ensure sensors.json is only writable by trusted users. Avoid risky scripts.
+```bash
+python -m pytest -q
+```
 
 ---
 
-## Troubleshooting
+## Contributing
 
-### 1. Error: “Unrecognized argument: --sensor-config”
-
-Use the environment variable instead:
-
-export ASNIP_CONFIG=/path/to/config.json  
-meshtastic
+Contributions are welcome. Please open issues or PRs; include tests for
+behavioral changes. If you change licensing or add new dependencies include
+justification in the PR description.
 
 ---
 
-### 2. Plugin regenerates default config
+## Files of Interest
 
-Likely cannot find your file in the current directory.  
-Set the full path in ASNIP_CONFIG.
-
----
-
-### 3. Permission denied writing log or config
-
-Change `log_file` to a writable location, such as `/tmp/sensor_log.json`.
+- `src/asnip/asnip.py` — plugin implementation
+- `sensors.json` — example/default configuration
+- `tests/` — unit tests used during development
+- `docs/` — additional documentation
 
 ---
 
-### 4. BME280 returns None
-
-- Ensure the library is installed  
-- Verify wiring  
-- Ensure I2C is enabled (raspi-config)
+If you want, I can add a GitHub Actions workflow to run tests on push/PR.
